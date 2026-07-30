@@ -88,6 +88,10 @@
     restoreSession();
     EXERCISES.forEach((ex) => {
       if (!answers[ex.id]) answers[ex.id] = emptyAnswers();
+      // pré-preenche o IP do host (já está no enunciado)
+      if (!normIp(answers[ex.id].hostIp)) {
+        answers[ex.id].hostIp = ex.hostIp;
+      }
     });
     renderAll();
     bindEvents();
@@ -135,7 +139,11 @@
 
   function normIp(s) {
     if (typeof s !== 'string') return '';
-    return s.trim().replace(/\s+/g, '');
+    return s
+      .trim()
+      .replace(/[\u200B-\u200D\uFEFF]/g, '') // caracteres invisíveis
+      .replace(/,/g, '.') // vírgula no lugar do ponto
+      .replace(/\s+/g, '');
   }
 
   function ipsEqual(a, b) {
@@ -157,12 +165,39 @@
       return c === expectedCidr;
     }
     // 255.255.255.0/24
-    m = raw.match(/^(\d+\.\d+\.\d+\.\d+)\s*\/\s*(\d{1,2})$/);
+    m = raw.match(/^(\d+\.\d+\.\d+\.\d+)\/(\d{1,2})$/);
     if (m) {
       return ipsEqual(m[1], expectedMaskIp) || Number(m[2]) === expectedCidr;
     }
+    // máscara com CIDR separado por espaço já normalizado fora
     const cidr = R.maskToCidr(raw);
     return cidr === expectedCidr;
+  }
+
+  /** Lê os inputs da tela (evita validar valor antigo em memória) */
+  function syncAnswersFromDom(exId) {
+    if (!answers[exId]) answers[exId] = emptyAnswers();
+    document
+      .querySelectorAll(`.field-input[data-ex="${exId}"]`)
+      .forEach((input) => {
+        const field = input.dataset.field;
+        if (field) answers[exId][field] = input.value;
+      });
+    return answers[exId];
+  }
+
+  /** Garante o IP do enunciado no campo host (não precisa redigitar) */
+  function ensureHostIp(exId) {
+    const ex = EXERCISES.find((x) => x.id === exId);
+    if (!ex) return;
+    if (!answers[exId]) answers[exId] = emptyAnswers();
+    if (!normIp(answers[exId].hostIp)) {
+      answers[exId].hostIp = ex.hostIp;
+      const input = document.querySelector(
+        `.field-input[data-ex="${exId}"][data-field="hostIp"]`
+      );
+      if (input && !normIp(input.value)) input.value = ex.hostIp;
+    }
   }
 
   function renderAll() {
@@ -261,10 +296,10 @@
           badge.textContent = 'Pendente';
           badge.className = 'ex-badge wait';
         }
-        updateProgressUI();
       }
       input.classList.remove('ok', 'err');
       persistSession();
+      updateProgressUI();
     });
 
     $('#exercises-root')?.addEventListener('click', (e) => {
@@ -318,7 +353,12 @@
     const ex = EXERCISES.find((x) => x.id === exId);
     if (!ex) return false;
     const exp = expectedFor(ex);
+
+    // sempre lê o que está na tela + preenche host se vazio
+    syncAnswersFromDom(exId);
+    ensureHostIp(exId);
     const ans = answers[exId] || emptyAnswers();
+
     const resultEl = $(`#result-${exId}`);
     const issues = [];
     const oks = [];
@@ -339,7 +379,7 @@
       }
       if (!R.isValidIP(raw)) {
         input?.classList.add('err');
-        issues.push(`${label}: IP inválido.`);
+        issues.push(`${label}: IP inválido ("${raw}"). Use o formato 0-255.0-255.0-255.0-255.`);
         return false;
       }
       if (!ipsEqual(raw, expected)) {
@@ -352,7 +392,7 @@
       return true;
     }
 
-    // host IP
+    // host IP (já vem do enunciado se o aluno não preencher)
     checkIpField('hostIp', exp.hostIp, 'Endereço IP (host)');
 
     // mask
@@ -364,7 +404,9 @@
         issues.push('Máscara: campo vazio.');
       } else if (!masksEqual(raw, exp.mask, exp.cidr)) {
         input?.classList.add('err');
-        issues.push('Máscara: valor incorreto (use decimal, ex. 255.255.255.0, ou /CIDR).');
+        issues.push(
+          `Máscara: valor incorreto (use ${exp.mask} ou /${exp.cidr}).`
+        );
       } else {
         input?.classList.add('ok');
         oks.push(`Máscara: correta (${exp.mask} = /${exp.cidr}).`);
@@ -431,13 +473,32 @@
     updateProgressUI();
   }
 
+  function isExerciseCorrect(exId) {
+    const ex = EXERCISES.find((x) => x.id === exId);
+    if (!ex) return false;
+    syncAnswersFromDom(exId);
+    ensureHostIp(exId);
+    const exp = expectedFor(ex);
+    const ans = answers[exId] || emptyAnswers();
+    if (!ipsEqual(ans.hostIp || ex.hostIp, exp.hostIp)) return false;
+    if (!masksEqual(ans.mask, exp.mask, exp.cidr)) return false;
+    if (!ipsEqual(ans.network, exp.network)) return false;
+    if (!ipsEqual(ans.first, exp.first)) return false;
+    if (!ipsEqual(ans.last, exp.last)) return false;
+    if (!ipsEqual(ans.broadcast, exp.broadcast)) return false;
+    return true;
+  }
+
   function updateProgressUI() {
-    const n = EXERCISES.filter((ex) => passed[ex.id]).length;
+    const correctFlags = EXERCISES.map((ex) => isExerciseCorrect(ex.id));
+    const n = correctFlags.filter(Boolean).length;
+    const allCorrect = n === EXERCISES.length;
     const el = $('#progress-pill');
     if (el) el.textContent = `${n} / 3 exercícios corretos`;
     const btn = $('#btn-submit');
-    if (btn) btn.disabled = n < 3 && !allPassedOnce;
-    if (n === 3) {
+    // permite enviar se os 3 estiverem certos (mesmo sem clicar Validar em cada um)
+    if (btn) btn.disabled = !allCorrect && !allPassedOnce;
+    if (allCorrect) {
       $('#ready-note')?.classList.add('show');
     } else {
       $('#ready-note')?.classList.remove('show');
@@ -445,7 +506,7 @@
   }
 
   function submitResult() {
-    // revalida tudo
+    // sincroniza e revalida tudo
     let all = true;
     EXERCISES.forEach((ex) => {
       if (!validateOne(ex.id, true)) all = false;

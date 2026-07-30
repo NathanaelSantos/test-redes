@@ -273,19 +273,37 @@
     $(`#block-${block}`)?.classList.toggle('passed', !!ok);
   }
 
+  /** Lê botões selecionados na tela → answers (evita dessincronizar) */
+  function syncAnswersFromDom() {
+    document.querySelectorAll('.type-btn.selected').forEach((btn) => {
+      const sid = btn.dataset.sid || btn.getAttribute('data-sid');
+      const type = btn.dataset.type || btn.getAttribute('data-type');
+      if (sid && type) answers[sid] = type;
+    });
+  }
+
+  function isBlockCorrect(block) {
+    const scenarios = block === 'a' ? SCENARIOS_A : SCENARIOS_B;
+    return scenarios.every((s) => answers[s.id] && answers[s.id] === s.answer);
+  }
+
   function bindEvents() {
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('.type-btn');
-      if (!btn || !btn.dataset.sid) return;
-      const sid = btn.dataset.sid;
-      const type = btn.dataset.type;
-      const block = btn.dataset.block;
+      if (!btn) return;
+      // data-* via getAttribute: mais confiável que dataset em alguns casos
+      const sid = btn.getAttribute('data-sid') || btn.dataset.sid;
+      const type = btn.getAttribute('data-type') || btn.dataset.type;
+      const block = btn.getAttribute('data-block') || btn.dataset.block;
+      if (!sid || !type) return;
+
       answers[sid] = type;
       blockPassed[block] = false;
       allPassedOnce = false;
       const item = btn.closest('.sc-item');
       item?.querySelectorAll('.type-btn').forEach((b) => {
-        b.classList.toggle('selected', b.dataset.type === type);
+        const t = b.getAttribute('data-type') || b.dataset.type;
+        b.classList.toggle('selected', t === type);
       });
       item?.classList.remove('ok', 'err');
       const fb = document.querySelector(`[data-fb="${sid}"]`);
@@ -307,6 +325,8 @@
   }
 
   function validateBlock(block, silent) {
+    syncAnswersFromDom();
+
     const scenarios = block === 'a' ? SCENARIOS_A : SCENARIOS_B;
     const metaFn = block === 'a' ? dirMeta : formMeta;
     let issues = 0;
@@ -315,7 +335,7 @@
     scenarios.forEach((s) => {
       const item = document.querySelector(`.sc-item[data-sid="${s.id}"]`);
       const fb = document.querySelector(`[data-fb="${s.id}"]`);
-      const chosen = answers[s.id] || '';
+      const chosen = String(answers[s.id] || '').trim();
       item?.classList.remove('ok', 'err');
 
       if (!chosen) {
@@ -384,12 +404,21 @@
   }
 
   function updateProgress() {
-    const n = ['a', 'b'].filter((k) => blockPassed[k]).length;
+    syncAnswersFromDom();
+    const aOk = isBlockCorrect('a');
+    const bOk = isBlockCorrect('b');
+    // estado real das respostas (libera envio sem precisar clicar Validar)
+    blockPassed.a = aOk;
+    blockPassed.b = bOk;
+    setBadge('a', aOk);
+    setBadge('b', bOk);
+
+    const n = (aOk ? 1 : 0) + (bOk ? 1 : 0);
     const pill = $('#progress-pill');
     if (pill) pill.textContent = `${n} / 2 blocos corretos`;
     const btn = $('#btn-submit');
-    if (btn) btn.disabled = n < 2 && !allPassedOnce;
-    $('#ready-note')?.classList.toggle('show', n === 2);
+    if (btn) btn.disabled = !(aOk && bOk) && !allPassedOnce;
+    $('#ready-note')?.classList.toggle('show', aOk && bOk);
   }
 
   function resetAll() {
@@ -416,6 +445,7 @@
   }
 
   function submitResult() {
+    syncAnswersFromDom();
     const a = validateBlock('a', true);
     const b = validateBlock('b', true);
     if (!a || !b) {
