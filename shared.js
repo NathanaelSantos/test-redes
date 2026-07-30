@@ -8,6 +8,12 @@
   const TEAM_KEY = 'sft_redes_current_team_v1';
   const CHANNEL_NAME = 'sft_redes_progress';
   const TEST_ID = 'teste-redes-uc1';
+  /** API do server.js (mesma origem quando roda com node server.js) */
+  const API_PROGRESS = '/api/progress';
+  const API_HEALTH = '/api/health';
+
+  let networkMode = null; // null = ainda não testou, true/false após probe
+  let syncInFlight = null;
 
   // ---------- IP helpers ----------
   function parseIP(ip) {
@@ -116,26 +122,198 @@
   }
 
   // ---------- Progresso / equipes ----------
+  function emptyProgress() {
+    return { testId: TEST_ID, teams: {}, updatedAt: null };
+  }
+
   function loadProgress() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        return { testId: TEST_ID, teams: {}, updatedAt: null };
-      }
+      if (!raw) return emptyProgress();
       const data = JSON.parse(raw);
       if (!data.teams) data.teams = {};
       return data;
     } catch {
-      return { testId: TEST_ID, teams: {}, updatedAt: null };
+      return emptyProgress();
     }
+  }
+
+  /** Mescla dois snapshots (equipes de notebooks diferentes) */
+  function mergeProgress(base, incoming) {
+    const out = {
+      testId: (incoming && incoming.testId) || (base && base.testId) || TEST_ID,
+      teams: {},
+      updatedAt: null,
+    };
+    const bTeams = (base && base.teams) || {};
+    const iTeams = (incoming && incoming.teams) || {};
+    const names = new Set([...Object.keys(bTeams), ...Object.keys(iTeams)]);
+
+    for (const name of names) {
+      const a = bTeams[name];
+      const b = iTeams[name];
+      if (!a) {
+        out.teams[name] = JSON.parse(JSON.stringify(b));
+        continue;
+      }
+      if (!b) {
+        out.teams[name] = JSON.parse(JSON.stringify(a));
+        continue;
+      }
+
+      const completed = {};
+      const ids = new Set([
+        ...Object.keys(a.completed || {}),
+        ...Object.keys(b.completed || {}),
+      ]);
+      for (const id of ids) {
+        const ca = (a.completed || {})[id];
+        const cb = (b.completed || {})[id];
+        if (ca && cb) {
+          const ta = Date.parse(ca.at || 0) || 0;
+          const tb = Date.parse(cb.at || 0) || 0;
+          completed[id] = tb >= ta ? cb : ca;
+        } else {
+          completed[id] = ca || cb;
+        }
+      }
+
+      const lastA = a.lastActivity || a.startedAt || null;
+      const lastB = b.lastActivity || b.startedAt || null;
+      let lastActivity = lastA || lastB;
+      if (lastA && lastB) {
+        lastActivity =
+          (Date.parse(lastB) || 0) >= (Date.parse(lastA) || 0) ? lastB : lastA;
+      }
+
+      let startedAt = a.startedAt || b.startedAt || null;
+      if (a.startedAt && b.startedAt) {
+        startedAt =
+          (Date.parse(a.startedAt) || 0) <= (Date.parse(b.startedAt) || 0)
+            ? a.startedAt
+            : b.startedAt;
+      }
+
+      out.teams[name] = {
+        name,
+        members: b.members || a.members || '',
+        completed,
+        startedAt,
+        lastActivity,
+      };
+    }
+
+    const tBase = base && base.updatedAt ? Date.parse(base.updatedAt) || 0 : 0;
+    const tIn = incoming && incoming.updatedAt ? Date.parse(incoming.updatedAt) || 0 : 0;
+    out.updatedAt = new Date(Math.max(tBase, tIn, Date.now())).toISOString();
+    return out;
+  }
+
+  function writeLocalProgress(data) {
+    data.updatedAt = data.updatedAt || new Date().toISOString();
+    data.testId = data.testId || TEST_ID;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    broadcastProgress(data);
+    return data;
   }
 
   function saveProgress(data) {
     data.updatedAt = new Date().toISOString();
     data.testId = data.testId || TEST_ID;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    broadcastProgress(data);
+    writeLocalProgress(data);
+    // envia ao servidor em rede (se existir) sem bloquear a UI
+    pushProgressToServer(data);
     return data;
+  }
+
+  async function probeNetworkMode() {
+    if (networkMode !== null) return networkMode;
+    // file:// nunca tem API
+    if (typeof location !== 'undefined' && location.protocol === 'file:') {
+      networkMode = false;
+      return false;
+    }
+    try {
+      const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const t = ctrl ? setTimeout(() => ctrl.abort(), 1500) : null;
+      const res = await fetch(API_HEALTH, {
+        method: 'GET',
+        cache: 'no-store',
+        signal: ctrl ? ctrl.signal : undefined,
+      });
+      if (t) clearTimeout(t);
+      networkMode = !!(res && res.ok);
+    } catch {
+      networkMode = false;
+    }
+    return networkMode;
+  }
+
+  async function pushProgressToServer(data) {
+    try {
+      const ok = await probeNetworkMode();
+      if (!ok) return null;
+      const res = await fetch(API_PROGRESS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data || loadProgress()),
+        cache: 'no-store',
+      });
+      if (!res.ok) return null;
+      const remote = await res.json();
+      // servidor devolve o merge global — atualiza cache local
+      if (remote && remote.teams) {
+        writeLocalProgress(remote);
+        return remote;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Busca progresso do servidor e mescla com o local.
+   * Use no painel (polling) e ao abrir o site.
+   * @returns {Promise<object>} progresso atualizado
+   */
+  async function syncFromServer() {
+    if (syncInFlight) return syncInFlight;
+    syncInFlight = (async () => {
+      try {
+        const ok = await probeNetworkMode();
+        if (!ok) return loadProgress();
+        const res = await fetch(API_PROGRESS, { method: 'GET', cache: 'no-store' });
+        if (!res.ok) return loadProgress();
+        const remote = await res.json();
+        const local = loadProgress();
+        const merged = mergeProgress(local, remote);
+        writeLocalProgress(merged);
+        // se o local tinha algo a mais, reenvia
+        const localNames = Object.keys(local.teams || {});
+        const remoteNames = Object.keys(remote.teams || {});
+        const localHasExtra =
+          localNames.some((n) => !remote.teams[n]) ||
+          localNames.some((n) => {
+            const lc = Object.keys((local.teams[n] && local.teams[n].completed) || {});
+            const rc = Object.keys((remote.teams[n] && remote.teams[n].completed) || {});
+            return lc.some((id) => !rc.includes(id));
+          });
+        if (localHasExtra || localNames.length > remoteNames.length) {
+          await pushProgressToServer(merged);
+        }
+        return loadProgress();
+      } catch {
+        return loadProgress();
+      } finally {
+        syncInFlight = null;
+      }
+    })();
+    return syncInFlight;
+  }
+
+  function isNetworkMode() {
+    return networkMode === true;
   }
 
   let channel = null;
@@ -273,9 +451,19 @@
   }
 
   function clearProgress() {
-    const empty = { testId: TEST_ID, teams: {}, updatedAt: new Date().toISOString() };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(empty));
-    broadcastProgress(empty);
+    const empty = emptyProgress();
+    empty.updatedAt = new Date().toISOString();
+    writeLocalProgress(empty);
+    // limpa também no servidor (rede)
+    (async () => {
+      try {
+        const ok = await probeNetworkMode();
+        if (!ok) return;
+        await fetch(API_PROGRESS, { method: 'DELETE', cache: 'no-store' });
+      } catch {
+        /* ignore */
+      }
+    })();
     return empty;
   }
 
@@ -327,6 +515,7 @@
     subnetContains,
     loadProgress,
     saveProgress,
+    mergeProgress,
     onProgressChange,
     markExerciseComplete,
     registerTeam,
@@ -337,5 +526,21 @@
     clearProgress,
     listTeams,
     formatDate,
+    syncFromServer,
+    pushProgressToServer,
+    probeNetworkMode,
+    isNetworkMode,
   };
+
+  // Ao carregar qualquer página servida pelo server.js, puxa o progresso da rede
+  if (typeof document !== 'undefined') {
+    const bootSync = () => {
+      syncFromServer().catch(() => {});
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootSync);
+    } else {
+      bootSync();
+    }
+  }
 })(typeof window !== 'undefined' ? window : globalThis);

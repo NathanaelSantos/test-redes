@@ -100,17 +100,60 @@
   function initPanel() {
     renderTableHead();
     render();
+    updateNetworkBadge();
     R.onProgressChange(() => {
       if (isAuthenticated()) render();
     });
-    $('#btn-refresh')?.addEventListener('click', render);
-    $('#btn-clear')?.addEventListener('click', () => {
-      if (!confirm('Apagar todo o progresso de todas as equipes neste navegador?')) return;
+    $('#btn-refresh')?.addEventListener('click', async () => {
+      await R.syncFromServer();
+      render();
+      updateNetworkBadge();
+    });
+    $('#btn-clear')?.addEventListener('click', async () => {
+      const net = R.isNetworkMode && R.isNetworkMode();
+      const msg = net
+        ? 'Apagar o progresso de TODAS as equipes no servidor (todos os notebooks)?'
+        : 'Apagar todo o progresso de todas as equipes neste navegador?';
+      if (!confirm(msg)) return;
       R.clearProgress();
+      // espera o DELETE no servidor
+      await new Promise((r) => setTimeout(r, 200));
+      await R.syncFromServer();
       render();
     });
     $('#btn-export')?.addEventListener('click', exportJson);
     setInterval(updateClock, 30000);
+    // polling: notebooks na rede atualizam o painel sem F5
+    setInterval(async () => {
+      if (!isAuthenticated()) return;
+      try {
+        await R.syncFromServer();
+        render();
+        updateNetworkBadge();
+      } catch {
+        /* ignore */
+      }
+    }, 3000);
+  }
+
+  async function updateNetworkBadge() {
+    const el = $('#live-mode');
+    if (!el) return;
+    try {
+      await R.probeNetworkMode();
+      if (R.isNetworkMode()) {
+        el.textContent = 'Ao vivo na rede (servidor)';
+        el.classList.add('network');
+        el.classList.remove('local-only');
+      } else {
+        el.textContent = 'Só este navegador (sem servidor)';
+        el.classList.add('local-only');
+        el.classList.remove('network');
+      }
+    } catch {
+      el.textContent = 'Só este navegador';
+      el.classList.add('local-only');
+    }
   }
 
   function renderTableHead() {

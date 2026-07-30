@@ -375,7 +375,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <span class="live-dot">Ao vivo (mesma origem)</span>
+        <span class="live-dot" id="live-mode">Sincronizando…</span>
         <button type="button" id="btn-refresh" class="btn btn-outline">Atualizar</button>
         <button type="button" id="btn-export" class="btn btn-outline">Exportar JSON</button>
         <button type="button" id="btn-clear" class="btn btn-danger">Limpar progresso</button>
@@ -450,8 +450,10 @@
         <div class="panel-body">
           <div id="empty-state" class="empty-state">
             <strong>Nenhuma equipe ainda</strong>
-            Peça para as equipes abrirem as questões (3–10), registrarem o nome no início e validarem o exercício.
-            Com este painel aberto na mesma máquina/navegador (ou mesma origem), a conclusão aparece sozinha.
+            Peça para as equipes abrirem o <strong>mesmo link da rede</strong> (ex.: http://SEU-IP:3000),
+            cadastrarem a equipe no início e concluírem os exercícios.
+            Com o servidor rodando (<code>node server.js</code>), o progresso de todos os notebooks
+            aparece aqui automaticamente.
           </div>
           <div class="table-wrap">
             <table>
@@ -466,8 +468,9 @@
             </table>
           </div>
           <p class="note">
-            Os dados ficam no <code>localStorage</code> deste navegador e sincronizam entre abas via
-            <code>BroadcastChannel</code>. Em PCs diferentes, use “Exportar JSON” ou um backend depois.
+            Com <code>node server.js</code>, o progresso de todos os notebooks fica em
+            <code>data/progress.json</code> e este painel atualiza sozinho a cada poucos segundos.
+            Sem o servidor (só arquivo HTML ou GitHub Pages), cada navegador guarda só o próprio progresso.
           </p>
         </div>
       </section>
