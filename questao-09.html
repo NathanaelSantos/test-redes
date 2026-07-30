@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Questão 9 · Duas redes interligadas | Teste de Redes</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111827;
+      --card: #1a2332;
+      --border: #2d3a4f;
+      --accent: #22d3ee;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --success: #10b981;
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --ring: rgba(34, 211, 238, 0.22);
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(ellipse 80% 50% at 10% -10%, rgba(34, 211, 238, 0.08), transparent 50%),
+        radial-gradient(ellipse 50% 40% at 100% 0%, rgba(167, 139, 250, 0.06), transparent 45%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .header {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+      border-bottom: 1px solid var(--border);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-brand { display: flex; align-items: center; gap: 12px; }
+    .header-mark {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: grid; place-items: center; font-weight: 800;
+      background: linear-gradient(145deg, #7c3aed, #a78bfa);
+      color: #1e1b4b;
+      box-shadow: 0 4px 14px rgba(167, 139, 250, 0.3);
+    }
+    .header h1 { font-size: 1.05rem; font-weight: 750; }
+    .header h1 span { color: #c4b5fd; }
+    .header .sub { font-size: 0.72rem; color: var(--muted); }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .badge {
+      background: rgba(167, 139, 250, 0.12);
+      color: #c4b5fd;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(167, 139, 250, 0.3);
+    }
+    #team-badge {
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--success);
+      border-color: rgba(16, 185, 129, 0.35);
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 18px 16px 40px; }
+
+    .success-banner {
+      display: none;
+      margin-bottom: 14px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.18), rgba(167, 139, 250, 0.08));
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      color: #a7f3d0;
+      font-weight: 600;
+      align-items: center;
+      gap: 10px;
+    }
+    .success-banner.show { display: flex; }
+    .success-banner .check {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--success); color: #fff;
+      display: grid; place-items: center; flex-shrink: 0;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+    .panel-header {
+      background: linear-gradient(90deg, rgba(167, 139, 250, 0.12), transparent);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 650;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 0.92rem;
+    }
+    .panel-body { padding: 14px 16px 16px; }
+
+    .scenario-text { color: var(--muted); font-size: 0.88rem; margin-bottom: 12px; }
+    .scenario-text strong { color: var(--text); }
+    .scenario-text code {
+      background: rgba(0,0,0,0.25);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--accent);
+      font-family: Consolas, ui-monospace, monospace;
+      font-size: 0.84em;
+    }
+
+    .req-row {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+    }
+    .req-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .req-chip b { color: #c4b5fd; }
+
+    .row { display: grid; grid-template-columns: 1fr 1.2fr auto; gap: 12px; align-items: end; }
+    @media (max-width: 720px) { .row { grid-template-columns: 1fr; } }
+
+    label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 4px;
+      margin-top: 8px;
+    }
+    label:first-child { margin-top: 0; }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 9px 11px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+    }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
+    .field-error { color: var(--danger); font-size: 0.8rem; margin-top: 8px; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 9px 14px; border: none; border-radius: 10px;
+      font-weight: 650; font-size: 0.86rem; cursor: pointer;
+      transition: all 0.15s var(--ease);
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #0b1220; }
+    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-outline {
+      background: transparent; border: 1px solid var(--border); color: var(--text);
+    }
+    .btn-outline:hover { border-color: #a78bfa; color: #c4b5fd; }
+    .btn-warn { background: #d97706; color: #fff; }
+    .btn-warn:hover { filter: brightness(1.06); }
+    .btn-purple {
+      background: #7c3aed; color: #fff;
+    }
+    .btn-purple:hover { filter: brightness(1.08); }
+    .btn.active {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--success);
+      color: #6ee7b7;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 14px;
+      min-height: 520px;
+    }
+    @media (max-width: 960px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .toolbar .sep {
+      width: 1px; height: 24px; background: var(--border); margin: 0 2px;
+    }
+    .counts {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto;
+    }
+    .count-pill {
+      font-size: 0.72rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 10px;
+      color: var(--muted);
+    }
+    .count-pill span { font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+    .count-pill span.ok { color: var(--success); }
+    .count-pill span.bad { color: var(--warn); }
+
+    .canvas-wrap {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background:
+        radial-gradient(circle at 1px 1px, #1e293b 1px, transparent 0);
+      background-size: 20px 20px;
+      background-color: #0c1322;
+      overflow: hidden;
+      height: 480px;
+    }
+    #canvas {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      user-select: none;
+    }
+    #canvas.mode-connect { cursor: crosshair; box-shadow: inset 0 0 0 2px rgba(16, 185, 129, 0.35); }
+    #canvas.mode-delete { cursor: not-allowed; box-shadow: inset 0 0 0 2px rgba(248, 113, 113, 0.3); }
+
+    .cables {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .cable {
+      stroke: #64748b;
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+    .cable.lan { stroke: #38bdf8; }
+    .cable.wan {
+      stroke: #a78bfa;
+      stroke-width: 4;
+      stroke-dasharray: 8 5;
+    }
+    .cable-mid { fill: #475569; }
+    .cable-mid.wan { fill: #a78bfa; }
+    .connect-pulse {
+      fill: none;
+      stroke: #34d399;
+      stroke-width: 2;
+      animation: pulse-r 1s ease-out infinite;
+    }
+    @keyframes pulse-r {
+      0% { r: 8; opacity: 1; }
+      100% { r: 22; opacity: 0; }
+    }
+
+    .device {
+      position: absolute;
+      width: 88px;
+      padding: 8px 6px;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      text-align: center;
+      cursor: grab;
+      z-index: 2;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .device:active { cursor: grabbing; }
+    .device.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+    .device.connect-from {
+      border-color: var(--success);
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
+    }
+    .device.host { border-top: 3px solid #38bdf8; }
+    .device.switch { border-top: 3px solid #34d399; }
+    .device.router { border-top: 3px solid #a78bfa; }
+    .dev-icon { font-size: 1.35rem; line-height: 1.2; }
+    .dev-label { font-size: 0.72rem; font-weight: 700; margin-top: 2px; }
+    .dev-ip {
+      font-size: 0.62rem;
+      color: var(--accent);
+      font-family: Consolas, ui-monospace, monospace;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .side-props {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 480px;
+    }
+    .side-props h3 {
+      padding: 12px 14px;
+      font-size: 0.88rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, rgba(34, 211, 238, 0.08), transparent);
+    }
+    #props-body {
+      padding: 12px 14px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    #props-body h4 { font-size: 0.9rem; margin-bottom: 8px; }
+    #props-body .muted { color: var(--muted); font-size: 0.8rem; }
+    #props-body .tip { margin-top: 10px; }
+    .iface-block {
+      margin-top: 12px;
+      padding: 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .iface-block strong { font-size: 0.82rem; display: block; margin-bottom: 4px; }
+    .iface-block .role { font-weight: 500; color: var(--muted); font-size: 0.72rem; }
+
+    #mode-hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .hint-box {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: rgba(167, 139, 250, 0.08);
+      border: 1px solid rgba(167, 139, 250, 0.3);
+      border-radius: 12px;
+      font-size: 0.84rem;
+      color: #ddd6fe;
+    }
+    .hint-box.open { display: block; }
+    .hint-box ol { margin: 8px 0 0 18px; }
+    .hint-box li { margin-bottom: 4px; }
+    .hint-box code {
+      background: rgba(0,0,0,0.25);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: var(--accent);
+      font-family: Consolas, ui-monospace, monospace;
+    }
+
+    #validation-panel { display: none; margin-top: 14px; }
+    #validation-panel.show { display: block; }
+    .val-summary {
+      padding: 11px 13px;
+      border-radius: 10px;
+      font-weight: 650;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+    .val-summary.ok {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #6ee7b7;
+    }
+    .val-summary.err {
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      color: #fca5a5;
+    }
+    #validation-list {
+      max-height: 240px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .val-item {
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      border-left: 3px solid #64748b;
+      background: var(--card);
+      color: var(--muted);
+    }
+    .val-item.err {
+      border-left-color: var(--danger);
+      background: rgba(248, 113, 113, 0.08);
+      color: #fca5a5;
+    }
+    .val-item.ok {
+      border-left-color: var(--success);
+      background: rgba(16, 185, 129, 0.08);
+      color: #6ee7b7;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      max-width: 360px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      font-size: 0.86rem;
+      font-weight: 600;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok { border-color: rgba(16, 185, 129, 0.5); color: #a7f3d0; }
+    .toast.err { border-color: rgba(248, 113, 113, 0.5); color: #fecaca; }
+    .toast.warn { border-color: rgba(251, 191, 36, 0.5); color: #fde68a; }
+
+    .footer-note {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-brand">
+      <div class="header-mark">09</div>
+      <div>
+        <h1>Questão <span>9</span> · Duas redes interligadas</h1>
+        <div class="sub">Hosts + switch + roteador × 2 · ligação entre roteadores</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="team-badge" class="badge" hidden></span>
+      <span class="badge">UC1</span>
+      <a class="btn btn-outline" href="index.html">Início</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="success-banner" class="success-banner" role="status">
+      <div class="check">✓</div>
+      <div>Exercício concluído. A equipe foi marcada como <strong>concluída</strong> no painel do instrutor.</div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-header">📋 Enunciado</div>
+      <div class="panel-body">
+        <p class="scenario-text">
+          Monte no canvas <strong>duas redes locais</strong>. Cada rede deve ter
+          <strong>5 hosts</strong>, <strong>1 switch</strong> e <strong>1 roteador</strong>.
+          Os hosts ligam no switch; o switch liga no roteador da mesma rede.
+          Depois, <strong>ligue os dois roteadores entre si</strong> (enlace WAN) para as redes se comunicarem.
+          Configure IPs diferentes em cada LAN e IPs no enlace entre os roteadores. No final, clique em
+          <strong>Validar exercício</strong>.
+        </p>
+        <div class="req-row">
+          <span class="req-chip">Por rede: <b>5 hosts</b> + <b>1 SW</b> + <b>1 R</b></span>
+          <span class="req-chip">Total: <b>10 PCs · 2 SW · 2 R</b></span>
+          <span class="req-chip">Sugestão LAN: <b>192.168.1.0/24</b> e <b>192.168.2.0/24</b></span>
+          <span class="req-chip">Sugestão WAN: <b>10.0.0.0/30</b></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="work-area" hidden>
+      <div class="panel-header">
+        <span>🛠 Montagem da topologia</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" id="btn-toggle-hint" class="btn btn-outline">Dicas</button>
+          <button type="button" id="btn-example" class="btn btn-outline">Carregar exemplo</button>
+          <button type="button" id="btn-reset" class="btn btn-outline">Limpar</button>
+          <button type="button" id="btn-validate" class="btn btn-warn">✔ Validar exercício</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="toolbar">
+          <button type="button" class="btn btn-purple tool-add" data-type="host">+ Host</button>
+          <button type="button" class="btn btn-purple tool-add" data-type="switch">+ Switch</button>
+          <button type="button" class="btn btn-purple tool-add" data-type="router">+ Roteador</button>
+          <span class="sep"></span>
+          <button type="button" id="btn-mode-select" class="btn btn-outline mode-btn active" data-mode="select">Selecionar</button>
+          <button type="button" id="btn-mode-connect" class="btn btn-outline mode-btn" data-mode="connect">Ligar cabo</button>
+          <button type="button" id="btn-mode-delete" class="btn btn-outline mode-btn" data-mode="delete">Remover</button>
+          <div class="counts">
+            <span class="count-pill">Hosts <span id="cnt-hosts">0</span>/10</span>
+            <span class="count-pill">SW <span id="cnt-sw">0</span>/2</span>
+            <span class="count-pill">R <span id="cnt-rt">0</span>/2</span>
+            <span class="count-pill">Cabos <span id="cnt-links">0</span></span>
+          </div>
+        </div>
+        <p id="mode-hint">Clique para selecionar · arraste para mover</p>
+
+        <div class="workspace">
+          <div class="canvas-wrap">
+            <div id="canvas"></div>
+          </div>
+          <aside class="side-props">
+            <h3>Propriedades</h3>
+            <div id="props-body">
+              <p class="muted">Selecione um dispositivo no canvas para configurar IP e interfaces.</p>
+            </div>
+          </aside>
+        </div>
+
+        <div id="hint-box" class="hint-box">
+          <strong>Passo a passo sugerido</strong>
+          <ol>
+            <li>Rede A: 5 hosts → 1 switch → 1 roteador (cabos host–switch e switch–roteador).</li>
+            <li>Rede B: o mesmo com outro switch e outro roteador.</li>
+            <li>Ligue <code>R1</code> a <code>R2</code> (cabo entre roteadores).</li>
+            <li>
+              LAN A: hosts <code>192.168.1.10–14</code>, máscara <code>255.255.255.0</code>,
+              gateway <code>192.168.1.1</code> (G0/0 do R1).
+            </li>
+            <li>
+              LAN B: hosts <code>192.168.2.10–14</code>, gateway <code>192.168.2.1</code> (G0/0 do R2).
+            </li>
+            <li>
+              WAN: G0/1 do R1 = <code>10.0.0.1</code>, G0/1 do R2 = <code>10.0.0.2</code>,
+              máscara <code>255.255.255.252</code> (/30).
+            </li>
+            <li>Valide. Se preferir, use <strong>Carregar exemplo</strong> e estude a montagem.</li>
+          </ol>
+        </div>
+
+        <div id="validation-panel">
+          <div id="validation-summary" class="val-summary"></div>
+          <div id="validation-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-note">
+      SFT Redes · Questão 9 · Progresso da equipe sincroniza com o painel (mesma origem / navegador).
+    </p>
+  </main>
+
+  <script src="shared.js"></script>
+  <script src="questao-09.js"></script>
+</body>
+</html>

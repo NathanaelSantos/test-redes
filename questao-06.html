@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Questão 6 · Máscaras e CIDR | Teste de Redes</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111827;
+      --card: #1a2332;
+      --border: #2d3a4f;
+      --accent: #22d3ee;
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --success: #10b981;
+      --ring: rgba(34, 211, 238, 0.22);
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(ellipse 70% 45% at 15% -8%, rgba(251, 191, 36, 0.08), transparent 50%),
+        radial-gradient(ellipse 50% 40% at 100% 0%, rgba(34, 211, 238, 0.08), transparent 45%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .header {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-brand { display: flex; align-items: center; gap: 12px; }
+    .header-mark {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: grid; place-items: center; font-size: 1.05rem; font-weight: 800;
+      background: linear-gradient(145deg, #d97706, #fbbf24);
+      color: #422006;
+      box-shadow: 0 4px 14px rgba(251, 191, 36, 0.3);
+    }
+    .header h1 { font-size: 1.08rem; font-weight: 750; letter-spacing: -0.02em; }
+    .header h1 span { color: #fcd34d; }
+    .header .sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .badge {
+      background: rgba(34, 211, 238, 0.12);
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(34, 211, 238, 0.28);
+      text-decoration: none;
+    }
+    #team-badge {
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--success);
+      border-color: rgba(16, 185, 129, 0.35);
+      max-width: 300px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .wrap { max-width: 920px; margin: 0 auto; padding: 18px 16px 56px; }
+
+    .success-banner {
+      display: none;
+      margin-bottom: 16px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.18), rgba(251, 191, 36, 0.08));
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      color: #a7f3d0;
+      font-weight: 600;
+      align-items: center;
+      gap: 10px;
+    }
+    .success-banner.show { display: flex; }
+    .success-banner .check {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--success); color: #fff;
+      display: grid; place-items: center; font-size: 1.1rem; flex-shrink: 0;
+    }
+
+    .intro {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .intro h2 { font-size: 1rem; margin-bottom: 6px; }
+    .intro p { color: var(--muted); font-size: 0.88rem; margin-bottom: 6px; }
+    .intro p strong { color: var(--text); }
+    .intro ul {
+      margin: 8px 0 0 1.15rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .intro li { margin-bottom: 3px; }
+    .intro code {
+      font-family: Consolas, ui-monospace, monospace;
+      color: #fcd34d;
+      font-size: 0.84em;
+    }
+    .formula {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+    .formula strong { color: var(--text); }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 650;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    #ready-note {
+      display: none;
+      font-size: 0.82rem;
+      color: #6ee7b7;
+      font-weight: 600;
+    }
+    #ready-note.show { display: inline; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #0b1220;
+      font-weight: 700;
+      font-size: 0.88rem;
+      border: none;
+      cursor: pointer;
+      transition: filter 0.15s, opacity 0.15s;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-primary {
+      background: linear-gradient(145deg, #d97706, #fbbf24);
+      color: #422006;
+    }
+    .btn-success {
+      background: linear-gradient(145deg, #059669, #34d399);
+      color: #042f2e;
+    }
+    .btn-danger-soft {
+      background: transparent;
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      color: #fca5a5;
+    }
+    .btn-sm { padding: 8px 14px; font-size: 0.84rem; }
+
+    .block {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 18px 18px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      transition: border-color 0.2s;
+    }
+    .block.passed {
+      border-color: rgba(16, 185, 129, 0.45);
+    }
+    .block-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .block-head h2 {
+      font-size: 1.02rem;
+      margin-bottom: 4px;
+    }
+    .block-head p {
+      font-size: 0.86rem;
+      color: var(--muted);
+      max-width: 520px;
+    }
+    .block-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .block-badge.ok {
+      color: #6ee7b7;
+      border-color: rgba(16, 185, 129, 0.45);
+      background: rgba(16, 185, 129, 0.12);
+    }
+    .block-badge.wait {
+      color: #fde68a;
+      border-color: rgba(251, 191, 36, 0.35);
+      background: rgba(251, 191, 36, 0.08);
+    }
+
+    .table-wrap { overflow-x: auto; margin-bottom: 12px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th {
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(45, 58, 79, 0.6);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    td.given code {
+      font-family: Consolas, ui-monospace, monospace;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #fcd34d;
+    }
+    td.given strong {
+      color: var(--text);
+      font-size: 0.92rem;
+    }
+    .row-hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .cell-input {
+      width: 100%;
+      min-width: 120px;
+      padding: 9px 11px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-size: 0.92rem;
+      font-family: Consolas, ui-monospace, monospace;
+      outline: none;
+    }
+    .cell-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+    .cell-input.ok {
+      border-color: var(--success);
+      background: rgba(16, 185, 129, 0.08);
+      color: #6ee7b7;
+    }
+    .cell-input.err {
+      border-color: var(--danger);
+      background: rgba(248, 113, 113, 0.08);
+    }
+
+    .block-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .block-result {
+      margin-top: 12px;
+      padding: 11px 13px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+    .block-result.ok {
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #a7f3d0;
+    }
+    .block-result.err {
+      border-color: rgba(248, 113, 113, 0.4);
+      color: #fecaca;
+    }
+    .block-result ul {
+      margin: 6px 0 0 1.1rem;
+      font-size: 0.82rem;
+    }
+
+    .foot {
+      margin-top: 18px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 100;
+      max-width: min(480px, 92vw);
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast.ok { border-color: rgba(16, 185, 129, 0.5); }
+    .toast.warn { border-color: rgba(251, 191, 36, 0.5); }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-brand">
+      <div class="header-mark">6</div>
+      <div>
+        <h1>Questão <span>6</span> · Máscaras e CIDR</h1>
+        <div class="sub">Conversão, hosts úteis e escolha de prefixo</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="team-badge" class="badge" hidden></span>
+      <a class="badge" href="index.html">← Início</a>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div id="success-banner" class="success-banner">
+      <div class="check">✓</div>
+      <div>
+        Os 3 blocos estão corretos e o resultado foi
+        <strong>enviado ao painel</strong> do instrutor.
+      </div>
+    </div>
+
+    <section class="intro">
+      <h2>O que você vai praticar</h2>
+      <p>
+        Máscara decimal pontilhada e notação <strong>CIDR</strong> representam a mesma coisa.
+        Complete os <strong>3 blocos</strong> abaixo.
+      </p>
+      <ul>
+        <li><strong>A</strong> — Do CIDR para a máscara e hosts úteis</li>
+        <li><strong>B</strong> — Da máscara para o CIDR e hosts úteis</li>
+        <li><strong>C</strong> — Quantos hosts precisa → menor CIDR (e máscara) adequado</li>
+      </ul>
+      <div class="formula">
+        <strong>Hosts úteis</strong> (CIDR &lt; 31): <code>2<sup>(32−CIDR)</sup> − 2</code>
+        · Ex.: /24 → 2⁸ − 2 = <strong>254</strong> · /30 → 2² − 2 = <strong>2</strong>
+      </div>
+    </section>
+
+    <div class="toolbar">
+      <span id="progress-pill" class="pill">0 / 3 blocos corretos</span>
+      <span id="ready-note">Pronto para enviar.</span>
+      <button type="button" id="btn-validate-all" class="btn btn-outline">Validar os 3</button>
+      <button type="button" id="btn-submit" class="btn btn-success" disabled>Enviar resultado</button>
+      <button type="button" id="btn-reset" class="btn btn-danger-soft">Limpar tudo</button>
+    </div>
+
+    <!-- Bloco A -->
+    <section class="block" id="block-a">
+      <div class="block-head">
+        <div>
+          <h2>A · CIDR → máscara e hosts</h2>
+          <p>Dado o prefixo, informe a máscara decimal e quantos hosts úteis a sub-rede tem.</p>
+        </div>
+        <span id="badge-a" class="block-badge wait">Pendente</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>CIDR</th>
+              <th>Máscara</th>
+              <th>Hosts úteis</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-a"></tbody>
+        </table>
+      </div>
+      <div class="block-actions">
+        <button type="button" id="btn-validate-a" class="btn btn-primary btn-sm">Validar bloco A</button>
+      </div>
+      <div id="result-a" class="block-result" hidden></div>
+    </section>
+
+    <!-- Bloco B -->
+    <section class="block" id="block-b">
+      <div class="block-head">
+        <div>
+          <h2>B · Máscara → CIDR e hosts</h2>
+          <p>Dada a máscara, informe o CIDR (com ou sem <code>/</code>) e os hosts úteis.</p>
+        </div>
+        <span id="badge-b" class="block-badge wait">Pendente</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Máscara</th>
+              <th>CIDR</th>
+              <th>Hosts úteis</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-b"></tbody>
+        </table>
+      </div>
+      <div class="block-actions">
+        <button type="button" id="btn-validate-b" class="btn btn-primary btn-sm">Validar bloco B</button>
+      </div>
+      <div id="result-b" class="block-result" hidden></div>
+    </section>
+
+    <!-- Bloco C -->
+    <section class="block" id="block-c">
+      <div class="block-head">
+        <div>
+          <h2>C · Hosts necessários → CIDR e máscara</h2>
+          <p>
+            Escolha o <strong>menor bloco</strong> (maior número CIDR) que ainda comporta a
+            quantidade de hosts. Preencha CIDR e máscara.
+          </p>
+        </div>
+        <span id="badge-c" class="block-badge wait">Pendente</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Necessidade</th>
+              <th>CIDR</th>
+              <th>Máscara</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-c"></tbody>
+        </table>
+      </div>
+      <div class="block-actions">
+        <button type="button" id="btn-validate-c" class="btn btn-primary btn-sm">Validar bloco C</button>
+      </div>
+      <div id="result-c" class="block-result" hidden></div>
+    </section>
+
+    <p class="foot">
+      SFT Redes · Questão 6 · Cadastro da equipe no <a href="index.html">início do teste</a>.
+    </p>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="shared.js"></script>
+  <script src="questao-06.js"></script>
+</body>
+</html>

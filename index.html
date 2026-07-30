@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teste de Redes · SFT</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111827;
+      --card: #1a2332;
+      --border: #2d3a4f;
+      --accent: #22d3ee;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --success: #10b981;
+      --danger: #f87171;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      --ring: rgba(34, 211, 238, 0.22);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(34, 211, 238, 0.1), transparent 50%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 40px 20px 48px; }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    h1 span { color: var(--accent); }
+    .lead { color: var(--muted); margin-bottom: 22px; font-size: 0.95rem; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      transition: border-color 0.2s, opacity 0.2s;
+    }
+    .card:hover { border-color: #3d4f6a; }
+    .card.locked {
+      opacity: 0.55;
+      pointer-events: none;
+    }
+    .num {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: grid; place-items: center;
+      font-weight: 800; font-size: 1.1rem;
+      background: linear-gradient(145deg, #0891b2, #22d3ee);
+      color: #0b1220;
+      flex-shrink: 0;
+    }
+    .num.panel {
+      background: linear-gradient(145deg, #059669, #34d399);
+      color: #042f2e;
+    }
+    .num.team {
+      background: linear-gradient(145deg, #7c3aed, #a78bfa);
+      color: #1e1b4b;
+    }
+    .card h2 { font-size: 1.05rem; margin-bottom: 4px; }
+    .card p { font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; }
+    .card p:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 5px;
+      margin-top: 10px;
+    }
+    label:first-of-type { margin-top: 0; }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+    }
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+    .field-error {
+      color: var(--danger);
+      font-size: 0.82rem;
+      margin-top: 8px;
+      min-height: 1.2em;
+    }
+    .field-ok {
+      color: #6ee7b7;
+      font-size: 0.82rem;
+      margin-top: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 16px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #0b1220;
+      font-weight: 700;
+      font-size: 0.88rem;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      filter: none;
+    }
+    .btn.ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      margin-left: 8px;
+    }
+    .btn.ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-row { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    .team-active {
+      display: none;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .team-active.show { display: block; }
+    .team-active strong { color: #6ee7b7; }
+    .team-active .members { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+
+    .notice {
+      display: none;
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      color: #fde68a;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+    .notice.show { display: block; }
+
+    .lock-note {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .foot {
+      margin-top: 28px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Teste de <span>Redes</span></h1>
+    <p class="lead">
+      Cadastre a equipe <strong>uma vez</strong> aqui. Depois é só abrir as questões —
+      o nome da equipe vale para todos os exercícios.
+    </p>
+
+    <div id="need-team-notice" class="notice">
+      Cadastre a equipe abaixo para liberar as questões.
+    </div>
+
+    <article class="card" id="team-card">
+      <div class="num team">👥</div>
+      <div style="flex:1; min-width:0">
+        <h2>Cadastro da equipe</h2>
+        <p>Faça isso primeiro. Não precisa se cadastrar de novo em cada questão.</p>
+
+        <div id="team-active" class="team-active">
+          Equipe ativa: <strong id="active-name"></strong>
+          <div class="members" id="active-members"></div>
+        </div>
+
+        <div id="register-form">
+          <label for="team-name">Nome da equipe *</label>
+          <input id="team-name" type="text" placeholder="Ex.: Equipe Alpha" maxlength="60" autocomplete="off" />
+
+          <label for="team-members">Integrantes (opcional)</label>
+          <input id="team-members" type="text" placeholder="Ana, Bruno, Carlos" maxlength="120" autocomplete="off" />
+
+          <p id="team-error" class="field-error" hidden></p>
+          <p id="team-ok" class="field-ok" hidden></p>
+
+          <div class="btn-row">
+            <button type="button" id="btn-register" class="btn">Cadastrar e continuar</button>
+            <button type="button" id="btn-change" class="btn ghost" hidden>Trocar equipe</button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <div id="exercises">
+      <article class="card exercise locked" data-href="questao-01.html">
+        <div class="num">1</div>
+        <div>
+          <h2>Rede cliente–servidor</h2>
+          <p>
+            Monte com figuras: clientes, switch e servidor. Ligue os cabos
+            (sem configurar IP).
+          </p>
+          <a class="btn exercise-link" href="questao-01.html">Abrir questão 1</a>
+          <p class="lock-note">Disponível após cadastrar a equipe.</p>
+        </div>
+      </article>
+
+      <article class="card exercise locked" data-href="questao-02.html">
+        <div class="num">2</div>
+        <div>
+          <h2>Métodos de transmissão de dados</h2>
+          <p>
+            Classifique cenários em Simplex, Half-duplex e Full-duplex, e em
+            transmissão Serial ou Paralela.
+          </p>
+          <a class="btn exercise-link" href="questao-02.html">Abrir questão 2</a>
+          <p class="lock-note">Disponível após cadastrar a equipe.</p>
+        </div>
+      </article>
+
+      <article class="card exercise locked" data-href="questao-03.html">
+        <div class="num">3</div>
+        <div>
+          <h2>Problemas × topologias de rede</h2>
+          <p>
+            Leia os problemas numerados e coloque o número em cada topologia adequada
+            (estrela, barramento, anel, malha, árvore, híbrida).
+          </p>
+          <a class="btn exercise-link" href="questao-03.html">Abrir questão 3</a>
+          <p class="lock-note">Disponível após cadastrar a equipe.</p>
+        </div>
+      </article>
+
+      <article class="card exercise locked" data-href="questao-04.html">
+        <div class="num">4</div>
+        <div>
+          <h2>Comunicação nas 7 camadas OSI</h2>
+          <p>
+            Monte a pilha OSI no emissor e no receptor, teste o fluxo em U
+            (desce → meio físico → sobe) e envie se o pacote chegar.
+          </p>
+          <a class="btn exercise-link" href="questao-04.html">Abrir questão 4</a>
+          <p class="lock-note">Disponível após cadastrar a equipe.</p>
+        </div>
+      </article>
+
+      <article class="card exercise locked" data-href="questao-05.html">
+        <div class="num">5</div>
+        <div>
+          <h2>Identificação de endereços IP</h2>
+          <p>
+            Em 3 cenários, identifique IP do host, máscara, endereço de rede,
+            primeiro e último host e broadcast.
+          </p>
+          <a class="btn exercise-link" href="questao-05.html">Abrir questão 5</a>
+          <p class="lock-note">Disponível após cadastrar a equipe.</p>
+        </div>
+      </article>
+
+      <article class="card exercise locked" data-href="questao-06.html">
+        <div class="num">6</div>
+        <div>
+          <h2>Máscaras de rede e CIDR</h2>
+          <p>
+            Converta CIDR ↔ máscara, calcule hosts úteis e escolha o prefixo
+            adequado para a quantidade de hosts.
+          </p>
+          <a class="btn exercise-link" href="questao-06.html">Abrir questão 6</a>
+          <p class="lock-note">Disponível após cadastrar a equipe.</p>
+        </div>
+      </article>
+
+      <article class="card exercise locked" data-href="questao-07.html">
+        <div class="num">7</div>
+        <div>
+          <h2>Listar sub-redes</h2>
+          <p>
+            Dada a rede base e o novo CIDR, liste todas as sub-redes iguais
+            (rede, 1º/último host e broadcast).
+          </p>
+          <a class="btn exercise-link" href="questao-07.html">Abrir questão 7</a>
+          <p class="lock-note">Disponível após cadastrar a equipe.</p>
+        </div>
+      </article>
+
+      <article class="card exercise locked" data-href="questao-08.html">
+        <div class="num">8</div>
+        <div>
+          <h2>Tipos de rede por abrangência</h2>
+          <p>
+            Classifique cada cenário pelo alcance geográfico:
+            <strong>PAN</strong>, <strong>LAN</strong>, <strong>MAN</strong> ou <strong>WAN</strong>.
+          </p>
+          <a class="btn exercise-link" href="questao-08.html">Abrir questão 8</a>
+          <p class="lock-note">Disponível após cadastrar a equipe.</p>
+        </div>
+      </article>
+
+      <article class="card exercise locked" data-href="questao-09.html">
+        <div class="num">9</div>
+        <div>
+          <h2>Duas redes interligadas por roteadores</h2>
+          <p>
+            Monte 2 redes, cada uma com 5 hosts, 1 switch e 1 roteador. Ligue os roteadores
+            entre si, configure IPs e valide a topologia.
+          </p>
+          <a class="btn exercise-link" href="questao-09.html">Abrir questão 9</a>
+          <p class="lock-note">Disponível após cadastrar a equipe.</p>
+        </div>
+      </article>
+
+      <article class="card exercise locked" data-href="questao-10.html">
+        <div class="num">10</div>
+        <div>
+          <h2>Sub-redes por departamento (VLSM)</h2>
+          <p>
+            A TechNova precisa dividir <code>192.168.10.0/24</code> entre TI, Vendas, RH,
+            Financeiro e Diretoria. Configure a tabela e valide.
+          </p>
+          <a class="btn exercise-link" href="questao-10.html">Abrir questão 10</a>
+          <p class="lock-note">Disponível após cadastrar a equipe.</p>
+        </div>
+      </article>
+    </div>
+
+    <article class="card">
+      <div class="num panel">◉</div>
+      <div>
+        <h2>Painel do instrutor</h2>
+        <p>
+          Área restrita (senha). Acompanhe as equipes e o status de cada exercício.
+        </p>
+        <a class="btn" href="painel.html">Abrir painel</a>
+      </div>
+    </article>
+
+    <p class="foot">
+      A equipe fica salva neste navegador. Em outro PC, cadastre de novo.
+    </p>
+  </div>
+
+  <script src="shared.js"></script>
+  <script>
+    (function () {
+      const R = window.SFTRedes;
+      const $ = (s) => document.querySelector(s);
+      const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+      const params = new URLSearchParams(location.search);
+      const returnTo = params.get('from') || '';
+
+      function esc(v) {
+        return String(v ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function refreshUI() {
+        const team = R.getCurrentTeam();
+        const hasTeam = !!(team && team.name);
+        const form = $('#register-form');
+        const active = $('#team-active');
+        const btnChange = $('#btn-change');
+        const notice = $('#need-team-notice');
+
+        if (params.get('needTeam') === '1' && !hasTeam) {
+          notice?.classList.add('show');
+        } else {
+          notice?.classList.remove('show');
+        }
+
+        if (hasTeam) {
+          active?.classList.add('show');
+          if ($('#active-name')) $('#active-name').textContent = team.name;
+          if ($('#active-members')) {
+            $('#active-members').textContent = team.members
+              ? 'Integrantes: ' + team.members
+              : '';
+          }
+          if ($('#team-name')) $('#team-name').value = team.name;
+          if ($('#team-members')) $('#team-members').value = team.members || '';
+          if (btnChange) btnChange.hidden = false;
+          // esconde campos se já cadastrado (pode trocar)
+          form?.classList.add('compact');
+        } else {
+          active?.classList.remove('show');
+          if (btnChange) btnChange.hidden = true;
+        }
+
+        $$('.exercise').forEach((card) => {
+          card.classList.toggle('locked', !hasTeam);
+          const note = card.querySelector('.lock-note');
+          if (note) note.hidden = hasTeam;
+          const link = card.querySelector('.exercise-link');
+          if (link) {
+            if (hasTeam) link.removeAttribute('aria-disabled');
+            else link.setAttribute('aria-disabled', 'true');
+          }
+        });
+      }
+
+      function register() {
+        const name = ($('#team-name')?.value || '').trim();
+        const members = ($('#team-members')?.value || '').trim();
+        const err = $('#team-error');
+        const ok = $('#team-ok');
+        if (err) { err.hidden = true; err.textContent = ''; }
+        if (ok) ok.hidden = true;
+
+        if (!name) {
+          if (err) {
+            err.textContent = 'Informe o nome da equipe.';
+            err.hidden = false;
+          }
+          return;
+        }
+
+        try {
+          R.registerTeam(name, members);
+          if (ok) {
+            ok.textContent = 'Equipe cadastrada! As questões já estão liberadas.';
+            ok.hidden = false;
+          }
+          refreshUI();
+
+          // se veio redirecionado de uma questão, volta pra lá
+          if (returnTo && /^questao-\d+\.html/.test(returnTo)) {
+            setTimeout(() => { location.href = returnTo; }, 400);
+          }
+        } catch (ex) {
+          if (err) {
+            err.textContent = ex.message || 'Não foi possível cadastrar.';
+            err.hidden = false;
+          }
+        }
+      }
+
+      $('#btn-register')?.addEventListener('click', register);
+      $('#team-name')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') register();
+      });
+      $('#team-members')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') register();
+      });
+
+      $('#btn-change')?.addEventListener('click', () => {
+        if (!confirm('Trocar de equipe? O progresso das questões já concluídas permanece no painel, mas esta máquina passará a usar o novo nome.')) {
+          return;
+        }
+        R.clearCurrentTeam();
+        if ($('#team-name')) $('#team-name').value = '';
+        if ($('#team-members')) $('#team-members').value = '';
+        if ($('#team-ok')) $('#team-ok').hidden = true;
+        $('#team-name')?.focus();
+        refreshUI();
+      });
+
+      // bloqueia clique em links se não houver equipe
+      $$('.exercise-link').forEach((a) => {
+        a.addEventListener('click', (e) => {
+          if (!R.getCurrentTeam()) {
+            e.preventDefault();
+            $('#need-team-notice')?.classList.add('show');
+            $('#team-name')?.focus();
+          }
+        });
+      });
+
+      refreshUI();
+    })();
+  </script>
+</body>
+</html>

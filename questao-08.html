@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Questão 8 · PAN · LAN · MAN · WAN | Teste de Redes</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111827;
+      --card: #1a2332;
+      --border: #2d3a4f;
+      --accent: #22d3ee;
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --success: #10b981;
+      --ring: rgba(34, 211, 238, 0.22);
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(ellipse 70% 45% at 10% -8%, rgba(244, 114, 182, 0.08), transparent 50%),
+        radial-gradient(ellipse 50% 40% at 100% 0%, rgba(167, 139, 250, 0.08), transparent 45%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .header {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-brand { display: flex; align-items: center; gap: 12px; }
+    .header-mark {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: grid; place-items: center; font-size: 1.05rem; font-weight: 800;
+      background: linear-gradient(145deg, #db2777, #f472b6);
+      color: #4a044e;
+      box-shadow: 0 4px 14px rgba(244, 114, 182, 0.35);
+    }
+    .header h1 { font-size: 1.08rem; font-weight: 750; letter-spacing: -0.02em; }
+    .header h1 span { color: #f9a8d4; }
+    .header .sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .badge {
+      background: rgba(34, 211, 238, 0.12);
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(34, 211, 238, 0.28);
+      text-decoration: none;
+    }
+    #team-badge {
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--success);
+      border-color: rgba(16, 185, 129, 0.35);
+      max-width: 300px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .wrap { max-width: 900px; margin: 0 auto; padding: 18px 16px 56px; }
+
+    .success-banner {
+      display: none;
+      margin-bottom: 16px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.18), rgba(244, 114, 182, 0.08));
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      color: #a7f3d0;
+      font-weight: 600;
+      align-items: center;
+      gap: 10px;
+    }
+    .success-banner.show { display: flex; }
+    .success-banner .check {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--success); color: #fff;
+      display: grid; place-items: center; font-size: 1.1rem; flex-shrink: 0;
+    }
+
+    .intro {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .intro h2 { font-size: 1rem; margin-bottom: 6px; }
+    .intro p { color: var(--muted); font-size: 0.88rem; margin-bottom: 4px; }
+    .intro p strong { color: var(--text); }
+
+    #types-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 800px) {
+      #types-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 420px) {
+      #types-grid { grid-template-columns: 1fr; }
+    }
+    .type-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      border-top: 3px solid var(--tc);
+      box-shadow: var(--shadow);
+    }
+    .type-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--tc);
+      letter-spacing: 0.04em;
+    }
+    .type-full {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .type-range {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .type-blurb {
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .pill {
+      font-size: 0.78rem;
+      font-weight: 650;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    #ready-note {
+      display: none;
+      font-size: 0.82rem;
+      color: #6ee7b7;
+      font-weight: 600;
+    }
+    #ready-note.show { display: inline; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #0b1220;
+      font-weight: 700;
+      font-size: 0.88rem;
+      border: none;
+      cursor: pointer;
+      transition: filter 0.15s, opacity 0.15s;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-primary {
+      background: linear-gradient(145deg, #db2777, #f472b6);
+      color: #4a044e;
+    }
+    .btn-success {
+      background: linear-gradient(145deg, #059669, #34d399);
+      color: #042f2e;
+    }
+    .btn-danger-soft {
+      background: transparent;
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      color: #fca5a5;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+    .panel-header {
+      background: linear-gradient(90deg, rgba(244, 114, 182, 0.12), rgba(167, 139, 250, 0.06));
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 650;
+      font-size: 0.95rem;
+    }
+    .panel-body { padding: 14px 16px 16px; }
+
+    #scenarios-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .sc-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .sc-item.ok {
+      border-color: rgba(16, 185, 129, 0.5);
+      box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.15);
+    }
+    .sc-item.err {
+      border-color: rgba(248, 113, 113, 0.5);
+    }
+    .sc-num {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: grid; place-items: center;
+      font-weight: 800;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .sc-body { flex: 1; min-width: 0; }
+    .sc-text {
+      font-size: 0.9rem;
+      color: var(--text);
+      margin-bottom: 10px;
+      line-height: 1.45;
+    }
+    .type-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .type-btn {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s, color 0.12s, transform 0.1s;
+    }
+    .type-btn:hover {
+      border-color: var(--tc);
+      color: var(--tc);
+    }
+    .type-btn.selected {
+      background: color-mix(in srgb, var(--tc) 18%, var(--bg));
+      border-color: var(--tc);
+      color: var(--tc);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc) 25%, transparent);
+    }
+    .sc-feedback {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .sc-feedback.ok { color: #6ee7b7; }
+    .sc-feedback.err { color: #fca5a5; }
+
+    #validation-panel { display: none; margin-top: 14px; }
+    #validation-panel.show { display: block; }
+    .val-summary {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .val-summary.ok { color: #6ee7b7; }
+    .val-summary.err { color: #fca5a5; }
+
+    .foot {
+      margin-top: 18px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 100;
+      max-width: min(480px, 92vw);
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast.ok { border-color: rgba(16, 185, 129, 0.5); }
+    .toast.warn { border-color: rgba(251, 191, 36, 0.5); }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-brand">
+      <div class="header-mark">8</div>
+      <div>
+        <h1>Questão <span>8</span> · Abrangência das redes</h1>
+        <div class="sub">Classifique cada cenário: PAN · LAN · MAN · WAN</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="team-badge" class="badge" hidden></span>
+      <a class="badge" href="index.html">← Início</a>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div id="success-banner" class="success-banner">
+      <div class="check">✓</div>
+      <div>
+        Classificações corretas. Resultado
+        <strong>enviado ao painel</strong> do instrutor.
+      </div>
+    </div>
+
+    <section class="intro">
+      <h2>O que fazer</h2>
+      <p>
+        Leia o resumo de cada tipo de rede por <strong>abrangência geográfica</strong>.
+        Depois, em cada cenário, clique no alcance correto:
+        <strong>PAN</strong>, <strong>LAN</strong>, <strong>MAN</strong> ou <strong>WAN</strong>.
+      </p>
+      <p>Valide e, com tudo certo, envie o resultado.</p>
+    </section>
+
+    <div id="types-grid"></div>
+
+    <div class="toolbar">
+      <span id="progress-pill" class="pill">0 / 8 respondidos</span>
+      <span id="ready-note">Pronto para enviar.</span>
+      <button type="button" id="btn-validate" class="btn btn-primary">Validar</button>
+      <button type="button" id="btn-submit" class="btn btn-success" disabled>Enviar resultado</button>
+      <button type="button" id="btn-reshuffle" class="btn btn-outline">Reembaralhar ordem</button>
+      <button type="button" id="btn-reset" class="btn btn-danger-soft">Limpar</button>
+    </div>
+
+    <section class="panel">
+      <div class="panel-header">Cenários — escolha o alcance</div>
+      <div class="panel-body">
+        <div id="scenarios-list"></div>
+
+        <div id="validation-panel">
+          <p id="validation-summary" class="val-summary"></p>
+        </div>
+      </div>
+    </section>
+
+    <p class="foot">
+      SFT Redes · Questão 8 · Cadastro da equipe no <a href="index.html">início do teste</a>.
+    </p>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="shared.js"></script>
+  <script src="questao-08.js"></script>
+</body>
+</html>
