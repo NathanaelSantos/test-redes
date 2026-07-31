@@ -18,17 +18,23 @@
   // ---------- IP helpers ----------
   function parseIP(ip) {
     if (typeof ip !== 'string') return null;
-    const parts = ip.trim().split('.');
+    // aceita espaços e sufixo /CIDR acidental
+    let s = ip.trim().replace(/\s+/g, '');
+    s = s.replace(/\/\d{1,2}$/, '');
+    const parts = s.split('.');
     if (parts.length !== 4) return null;
     const nums = parts.map((p) => {
-      if (!/^\d+$/.test(p)) return NaN;
-      return Number(p);
+      if (!/^\d{1,3}$/.test(p)) return NaN;
+      return parseInt(p, 10);
     });
     if (nums.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null;
-    return ((nums[0] << 24) >>> 0) + (nums[1] << 16) + (nums[2] << 8) + nums[3];
+    // multiplicação evita surpresas de shift em int32 assinado
+    return ((nums[0] * 16777216) + (nums[1] * 65536) + (nums[2] * 256) + nums[3]) >>> 0;
   }
 
   function intToIP(n) {
+    n = Number(n);
+    if (!Number.isFinite(n)) return '0.0.0.0';
     n = n >>> 0;
     return [
       (n >>> 24) & 255,
@@ -50,6 +56,19 @@
   }
 
   function maskToCidr(mask) {
+    // aceita número CIDR (30), string "/30" ou "30", ou dotted 255.255.255.252
+    if (typeof mask === 'number' && Number.isInteger(mask) && mask >= 0 && mask <= 32) {
+      return mask;
+    }
+    if (typeof mask === 'string') {
+      const s = mask.trim().replace(/\s+/g, '');
+      const cidrOnly = s.match(/^\/?(\d{1,2})$/);
+      if (cidrOnly) {
+        const c = parseInt(cidrOnly[1], 10);
+        if (c >= 0 && c <= 32) return c;
+        return null;
+      }
+    }
     const m = typeof mask === 'number' ? mask : parseIP(mask);
     if (m === null) return null;
     // máscara contígua?
@@ -67,9 +86,23 @@
     return bits;
   }
 
+  /** true se for máscara dotted OU notação CIDR (/30, 30) */
+  function isValidMask(mask) {
+    return maskToCidr(mask) !== null;
+  }
+
+  /** Converte entrada de máscara para dotted decimal (ou null) */
+  function normalizeMask(mask) {
+    const c = maskToCidr(mask);
+    if (c === null) return null;
+    const n = cidrToMask(c);
+    if (n === null || n === undefined) return null;
+    return intToIP(n);
+  }
+
   function networkOf(ip, cidrOrMask) {
-    const ipInt = typeof ip === 'number' ? ip : parseIP(ip);
-    if (ipInt === null) return null;
+    const ipInt = typeof ip === 'number' ? (ip >>> 0) : parseIP(ip);
+    if (ipInt === null || ipInt === undefined) return null;
     let mask;
     if (typeof cidrOrMask === 'number' && cidrOrMask <= 32) {
       mask = cidrToMask(cidrOrMask);
@@ -77,7 +110,9 @@
       mask = typeof cidrOrMask === 'number' ? cidrOrMask : parseIP(cidrOrMask);
       if (mask === null || maskToCidr(mask) === null) return null;
     }
-    return (ipInt & mask) >>> 0;
+    if (mask === null || mask === undefined) return null;
+    // & em JS usa int32; força unsigned nos dois lados
+    return ((ipInt >>> 0) & (mask >>> 0)) >>> 0;
   }
 
   function broadcastOf(ip, cidrOrMask) {
@@ -89,8 +124,9 @@
     } else {
       mask = typeof cidrOrMask === 'number' ? cidrOrMask : parseIP(cidrOrMask);
     }
-    const hostBits = (~mask) >>> 0;
-    return (net | hostBits) >>> 0;
+    if (mask === null || mask === undefined) return null;
+    const hostBits = (~(mask >>> 0)) >>> 0;
+    return ((net >>> 0) | hostBits) >>> 0;
   }
 
   function hostCapacity(cidr) {
@@ -505,6 +541,8 @@
     parseIP,
     intToIP,
     isValidIP,
+    isValidMask,
+    normalizeMask,
     cidrToMask,
     maskToCidr,
     networkOf,

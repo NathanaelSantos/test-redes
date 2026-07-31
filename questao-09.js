@@ -774,7 +774,7 @@
     lanGroups.forEach((g, idx) => {
       const r = g.router;
       const lanIface = (r.ifaces || []).find((i) => i.role === 'lan') || r.ifaces?.[0];
-      if (!lanIface || !R.isValidIP(lanIface.ip) || !R.isValidIP(lanIface.mask)) {
+      if (!lanIface || !R.isValidIP(lanIface.ip) || !(R.isValidMask ? R.isValidMask(lanIface.mask) : R.isValidIP(lanIface.mask))) {
         issues.push({
           level: 'err',
           msg: `${r.label}: configure IP e máscara da interface LAN (G0/0).`,
@@ -804,7 +804,7 @@
           issues.push({ level: 'err', msg: `${h.label}: IP inválido ou vazio.` });
           return;
         }
-        if (!R.isValidIP(h.mask)) {
+        if (!(R.isValidMask ? R.isValidMask(h.mask) : R.isValidIP(h.mask))) {
           issues.push({ level: 'err', msg: `${h.label}: máscara inválida.` });
           return;
         }
@@ -876,10 +876,10 @@
 
       let wanOk = true;
       wanIfaces.forEach(({ router, iface }) => {
-        if (!iface || !R.isValidIP(iface.ip) || !R.isValidIP(iface.mask)) {
+        if (!iface || !R.isValidIP(iface.ip) || !(R.isValidMask ? R.isValidMask(iface.mask) : R.isValidIP(iface.mask))) {
           issues.push({
             level: 'err',
-            msg: `${router.label}: configure IP e máscara da interface WAN (G0/1).`,
+            msg: `${router.label}: configure IP e máscara da interface WAN (G0/1). Ex.: 10.0.0.1 e 255.255.255.252 (ou /30).`,
           });
           wanOk = false;
         }

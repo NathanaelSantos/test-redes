@@ -25,6 +25,14 @@
       hostIp: '192.168.10.45',
       cidr: 24,
       color: '#22d3ee',
+      // gabarito fixo (não depende de cálculo em tempo de execução)
+      expected: {
+        mask: '255.255.255.0',
+        network: '192.168.10.0',
+        first: '192.168.10.1',
+        last: '192.168.10.254',
+        broadcast: '192.168.10.255',
+      },
     },
     {
       id: 'ex2',
@@ -35,6 +43,13 @@
       hostIp: '172.16.5.100',
       cidr: 26,
       color: '#a78bfa',
+      expected: {
+        mask: '255.255.255.192',
+        network: '172.16.5.64',
+        first: '172.16.5.65',
+        last: '172.16.5.126',
+        broadcast: '172.16.5.127',
+      },
     },
     {
       id: 'ex3',
@@ -45,6 +60,13 @@
       hostIp: '10.0.0.130',
       cidr: 28,
       color: '#34d399',
+      expected: {
+        mask: '255.255.255.240',
+        network: '10.0.0.128',
+        first: '10.0.0.129',
+        last: '10.0.0.142',
+        broadcast: '10.0.0.143',
+      },
     },
   ];
 
@@ -58,15 +80,38 @@
   ];
 
   function expectedFor(ex) {
+    // prioriza gabarito fixo; fallback calcula se faltar
+    if (ex.expected && ex.expected.network && ex.expected.first) {
+      return {
+        hostIp: ex.hostIp,
+        mask: ex.expected.mask,
+        network: ex.expected.network,
+        first: ex.expected.first,
+        last: ex.expected.last,
+        broadcast: ex.expected.broadcast,
+        cidr: ex.cidr,
+      };
+    }
     const net = R.networkOf(ex.hostIp, ex.cidr);
     const bcast = R.broadcastOf(ex.hostIp, ex.cidr);
     const mask = R.cidrToMask(ex.cidr);
+    if (net == null || bcast == null || mask == null) {
+      return {
+        hostIp: ex.hostIp,
+        mask: '',
+        network: '',
+        first: '',
+        last: '',
+        broadcast: '',
+        cidr: ex.cidr,
+      };
+    }
     return {
       hostIp: ex.hostIp,
       mask: R.intToIP(mask),
       network: R.intToIP(net),
-      first: R.intToIP(net + 1),
-      last: R.intToIP(bcast - 1),
+      first: R.intToIP((net + 1) >>> 0),
+      last: R.intToIP((bcast - 1) >>> 0),
       broadcast: R.intToIP(bcast),
       cidr: ex.cidr,
     };
@@ -137,51 +182,95 @@
       .replace(/"/g, '&quot;');
   }
 
-  function normIp(s) {
-    if (typeof s !== 'string') return '';
-    return s
+  /** Limpa texto digitado (espaços, vírgula, caracteres invisíveis) */
+  function cleanRaw(s) {
+    if (s == null) return '';
+    return String(s)
       .trim()
-      .replace(/[\u200B-\u200D\uFEFF]/g, '') // caracteres invisíveis
-      .replace(/,/g, '.') // vírgula no lugar do ponto
+      .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
+      .replace(/[，、]/g, '.') // vírgulas unicode
+      .replace(/,/g, '.')
+      .replace(/[。．]/g, '.') // pontos fullwidth
       .replace(/\s+/g, '');
   }
 
+  /**
+   * Normaliza IP para forma canônica "a.b.c.d" (sem zeros à esquerda).
+   * Aceita "192.168.10.0/24" (ignora o /CIDR), pontos/vírgulas variados.
+   * @returns {string|null}
+   */
+  function canonicalizeIp(s) {
+    let raw = cleanRaw(s);
+    if (!raw) return null;
+    // tira sufixo /24 se o aluno colar rede com CIDR
+    raw = raw.replace(/\/\d{1,2}$/, '');
+    // tira ponto final solto
+    raw = raw.replace(/\.+$/, '');
+    const parts = raw.split('.');
+    if (parts.length !== 4) return null;
+    const nums = [];
+    for (let i = 0; i < 4; i++) {
+      const p = parts[i];
+      if (!/^\d{1,3}$/.test(p)) return null;
+      const n = parseInt(p, 10);
+      if (!Number.isInteger(n) || n < 0 || n > 255) return null;
+      nums.push(n);
+    }
+    return nums.join('.');
+  }
+
+  function normIp(s) {
+    // mantém compat: string limpa (pode ainda ter /cidr — canonicalize remove)
+    return cleanRaw(s);
+  }
+
   function ipsEqual(a, b) {
-    const pa = R.parseIP(normIp(a));
-    const pb = R.parseIP(normIp(b));
-    if (pa === null || pb === null) return false;
-    return pa === pb;
+    const ca = canonicalizeIp(a);
+    const cb = canonicalizeIp(b);
+    if (ca == null || cb == null) return false;
+    return ca === cb;
   }
 
   /** Aceita máscara pontilhada ou /CIDR ou só número CIDR */
   function masksEqual(input, expectedMaskIp, expectedCidr) {
-    const raw = normIp(input);
+    const raw = cleanRaw(input);
     if (!raw) return false;
+    // máscara decimal
     if (ipsEqual(raw, expectedMaskIp)) return true;
     // /24 ou 24
     let m = raw.match(/^\/?(\d{1,2})$/);
     if (m) {
-      const c = Number(m[1]);
-      return c === expectedCidr;
+      return Number(m[1]) === expectedCidr;
     }
     // 255.255.255.0/24
     m = raw.match(/^(\d+\.\d+\.\d+\.\d+)\/(\d{1,2})$/);
     if (m) {
       return ipsEqual(m[1], expectedMaskIp) || Number(m[2]) === expectedCidr;
     }
-    // máscara com CIDR separado por espaço já normalizado fora
-    const cidr = R.maskToCidr(raw);
-    return cidr === expectedCidr;
+    // tenta via shared (máscara contígua)
+    try {
+      const cidr = R.maskToCidr(canonicalizeIp(raw) || raw);
+      return cidr === expectedCidr;
+    } catch {
+      return false;
+    }
   }
 
   /** Lê os inputs da tela (evita validar valor antigo em memória) */
   function syncAnswersFromDom(exId) {
-    if (!answers[exId]) answers[exId] = emptyAnswers();
+    if (!answers[exId] || typeof answers[exId] !== 'object') {
+      answers[exId] = emptyAnswers();
+    }
     document
       .querySelectorAll(`.field-input[data-ex="${exId}"]`)
       .forEach((input) => {
-        const field = input.dataset.field;
-        if (field) answers[exId][field] = input.value;
+        const field =
+          input.getAttribute('data-field') || input.dataset.field || '';
+        if (field && Object.prototype.hasOwnProperty.call(answers[exId], field)) {
+          answers[exId][field] = input.value;
+        } else if (field) {
+          answers[exId][field] = input.value;
+        }
       });
     return answers[exId];
   }
@@ -328,6 +417,8 @@
 
   function clearOne(exId) {
     answers[exId] = emptyAnswers();
+    const ex = EXERCISES.find((x) => x.id === exId);
+    if (ex) answers[exId].hostIp = ex.hostIp;
     passed[exId] = false;
     allPassedOnce = false;
     persistSession();
@@ -342,6 +433,7 @@
     allPassedOnce = false;
     EXERCISES.forEach((ex) => {
       answers[ex.id] = emptyAnswers();
+      answers[ex.id].hostIp = ex.hostIp;
     });
     persistSession();
     $('#success-banner')?.classList.remove('show');
@@ -370,24 +462,35 @@
     });
 
     function checkIpField(key, expected, label) {
-      const raw = normIp(ans[key]);
-      const input = document.querySelector(`.field-input[data-ex="${exId}"][data-field="${key}"]`);
-      if (!raw) {
+      const typed = ans[key];
+      const input = document.querySelector(
+        `.field-input[data-ex="${exId}"][data-field="${key}"]`
+      );
+      const canon = canonicalizeIp(typed);
+      if (!cleanRaw(typed)) {
         input?.classList.add('err');
         issues.push(`${label}: campo vazio.`);
         return false;
       }
-      if (!R.isValidIP(raw)) {
+      if (canon == null) {
         input?.classList.add('err');
-        issues.push(`${label}: IP inválido ("${raw}"). Use o formato 0-255.0-255.0-255.0-255.`);
+        issues.push(
+          `${label}: formato inválido. Use quatro números 0–255 separados por ponto (ex.: ${expected}).`
+        );
         return false;
       }
-      if (!ipsEqual(raw, expected)) {
+      if (!ipsEqual(canon, expected)) {
         input?.classList.add('err');
-        issues.push(`${label}: valor incorreto.`);
+        // mostra o que o sistema entendeu (ajuda a achar erro de digitação)
+        issues.push(
+          `${label}: incorreto (você informou ${canon}; confira o cálculo da sub-rede /${exp.cidr}).`
+        );
         return false;
       }
       input?.classList.add('ok');
+      // grava forma canônica
+      ans[key] = canon;
+      if (input) input.value = canon;
       oks.push(`${label}: correto (${expected}).`);
       return true;
     }
